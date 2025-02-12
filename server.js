@@ -64,7 +64,7 @@ eventDB.on('error', (err) => {
 // 3. Contact DB Connection (for subscribers & nodemailer)
 //    Note: This connection uses a separate hard-coded URI.
 const contactDBURI =
-  'mongodb+srv://barryjacob08:HrpYPLgajMiRJBgN@cluster0.ssafp.mongodb.net/yourDBName?retryWrites=true&w=majority';
+  'mongodb+srv://barryjacob08:HrpYPLgajMiRJBgN@cluster0.ssafp.mongodb.net/Wordhouse?retryWrites=true&w=majority';
 const contactDB = mongoose.createConnection(contactDBURI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
