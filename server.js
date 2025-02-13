@@ -871,7 +871,7 @@ app.post('/contact/sendSubscribeMessage', async (req, res) => {
       const personalizedBody = body.replace(/{name}/g, subscriber.name);
 
       const mailOptions = {
-        from: '"Subscribe Message" <philip.ajayi@fivorne.com>',
+        from: '"MIV Word House" <philip.ajayi@fivorne.com>',
         to: subscriber.email,
         subject: personalizedSubject,
         text: personalizedBody,
