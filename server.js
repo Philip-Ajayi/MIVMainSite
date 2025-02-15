@@ -1,8 +1,3 @@
-// -----------------------
-// Combined server.js File
-// -----------------------
-
-// Load environment variables
 require('dotenv').config();
 
 // Import dependencies
@@ -22,10 +17,12 @@ const app = express();
 // -----------------------
 // Global Middleware Setup
 // -----------------------
-app.use(cors({
-  origin: 'http://localhost:5173', // Adjust as needed
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-}));
+app.use(
+  cors({
+    origin: 'http://localhost:5173', // Adjust as needed
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  })
+);
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
@@ -348,7 +345,9 @@ app.get('/event/events', async (req, res) => {
 
 app.put('/event/events/:id', async (req, res) => {
   try {
-    const event = await Event.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const event = await Event.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+    });
     if (!event)
       return res.status(404).json({ error: 'Event not found' });
     console.log('Event Updated:', event);
@@ -406,7 +405,11 @@ app.get('/devotional/contents', async (req, res) => {
 
 app.put('/devotional/update/:id', async (req, res) => {
   try {
-    const updatedContent = await Content.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const updatedContent = await Content.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true }
+    );
     res.json({ message: 'Content Updated', data: updatedContent });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -485,8 +488,11 @@ app.get('/blog/blogs/:id/views', async (req, res) => {
 
 app.put('/blog/blogs/:id', async (req, res) => {
   try {
-    const updatedBlog = await Blog.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    if (!updatedBlog) return res.status(404).json({ message: 'Blog not found' });
+    const updatedBlog = await Blog.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+    });
+    if (!updatedBlog)
+      return res.status(404).json({ message: 'Blog not found' });
     console.log('Blog Updated:', updatedBlog);
     res.json(updatedBlog);
   } catch (error) {
@@ -497,7 +503,8 @@ app.put('/blog/blogs/:id', async (req, res) => {
 app.delete('/blog/blogs/:id', async (req, res) => {
   try {
     const deletedBlog = await Blog.findByIdAndDelete(req.params.id);
-    if (!deletedBlog) return res.status(404).json({ message: 'Blog not found' });
+    if (!deletedBlog)
+      return res.status(404).json({ message: 'Blog not found' });
     console.log('Blog Deleted:', deletedBlog);
     res.json({ message: 'Blog deleted successfully' });
   } catch (error) {
@@ -529,23 +536,26 @@ app.get('/blog/authors', async (req, res) => {
 
 // ----- Schedule -----
 // Define Schedule Schema & Model (using eventDB)
+// Note the new "image" field added to store an image URL
 const scheduleSchema = new mongoose.Schema({
   name: { type: String, required: true },
   description: String,
+  image: String, // New field to store an image URL
   scheduleTime: { type: Date, required: true },
   timeZone: String,
-  createdAt: { type: Date, default: Date.now }
+  createdAt: { type: Date, default: Date.now },
 });
 const Schedule = eventDB.model('Schedule', scheduleSchema);
 
 app.post('/radio/schedule', async (req, res) => {
   try {
-    const { name, description, scheduleTime, timeZone } = req.body;
+    const { name, description, scheduleTime, timeZone, image } = req.body;
     const newSchedule = new Schedule({
       name,
       description,
+      image, // Save image URL if provided
       scheduleTime: new Date(scheduleTime),
-      timeZone
+      timeZone,
     });
     const saved = await newSchedule.save();
     console.log('Created schedule:', saved);
@@ -561,10 +571,16 @@ app.put('/radio/schedule/:id', async (req, res) => {
     const updateData = {
       name: req.body.name,
       description: req.body.description,
-      scheduleTime: req.body.scheduleTime ? new Date(req.body.scheduleTime) : undefined,
-      timeZone: req.body.timeZone
+      image: req.body.image, // Update image URL if provided
+      scheduleTime: req.body.scheduleTime
+        ? new Date(req.body.scheduleTime)
+        : undefined,
+      timeZone: req.body.timeZone,
     };
-    Object.keys(updateData).forEach(key => updateData[key] === undefined && delete updateData[key]);
+    // Remove undefined keys
+    Object.keys(updateData).forEach(
+      (key) => updateData[key] === undefined && delete updateData[key]
+    );
     const updated = await Schedule.findByIdAndUpdate(
       req.params.id,
       { $set: updateData },
@@ -602,7 +618,9 @@ app.get('/radio/schedule/all', async (req, res) => {
 app.get('/radio/schedule/future', async (req, res) => {
   try {
     const now = new Date();
-    const schedules = await Schedule.find({ scheduleTime: { $gt: now } }).sort({ scheduleTime: 1 });
+    const schedules = await Schedule.find({
+      scheduleTime: { $gt: now },
+    }).sort({ scheduleTime: 1 });
     res.json(schedules);
   } catch (err) {
     console.error('Error fetching future schedules:', err);
@@ -613,7 +631,9 @@ app.get('/radio/schedule/future', async (req, res) => {
 app.get('/radio/schedule/now', async (req, res) => {
   try {
     const now = new Date();
-    const nowSchedule = await Schedule.findOne({ scheduleTime: { $lte: now } }).sort({ scheduleTime: -1 });
+    const nowSchedule = await Schedule.findOne({
+      scheduleTime: { $lte: now },
+    }).sort({ scheduleTime: -1 });
     res.json(nowSchedule);
   } catch (err) {
     console.error('Error fetching now playing schedule:', err);
@@ -624,7 +644,9 @@ app.get('/radio/schedule/now', async (req, res) => {
 app.get('/radio/schedule/next', async (req, res) => {
   try {
     const now = new Date();
-    const nextSchedule = await Schedule.findOne({ scheduleTime: { $gt: now } }).sort({ scheduleTime: 1 });
+    const nextSchedule = await Schedule.findOne({
+      scheduleTime: { $gt: now },
+    }).sort({ scheduleTime: 1 });
     res.json(nextSchedule);
   } catch (err) {
     console.error('Error fetching next schedule:', err);
@@ -637,13 +659,13 @@ app.get('/radio/schedule/next', async (req, res) => {
 const chatCommentSchema = new mongoose.Schema({
   name: String,
   comment: String,
-  createdAt: { type: Date, default: Date.now }
+  createdAt: { type: Date, default: Date.now },
 });
 const chatSessionSchema = new mongoose.Schema({
   startTime: { type: Date, required: true },
   endTime: { type: Date, required: true },
   comments: [chatCommentSchema],
-  createdAt: { type: Date, default: Date.now }
+  createdAt: { type: Date, default: Date.now },
 });
 const ChatSession = eventDB.model('ChatSession', chatSessionSchema);
 
@@ -652,7 +674,7 @@ app.post('/radio/chatsession', async (req, res) => {
     const { startTime, endTime } = req.body;
     const newSession = new ChatSession({
       startTime: new Date(startTime),
-      endTime: new Date(endTime)
+      endTime: new Date(endTime),
     });
     const saved = await newSession.save();
     console.log('Created chat session:', saved);
@@ -706,7 +728,8 @@ app.post('/radio/chatsession/:id/comment', async (req, res) => {
   try {
     const { name, comment } = req.body;
     const session = await ChatSession.findById(req.params.id);
-    if (!session) return res.status(404).json({ error: 'Chat session not found' });
+    if (!session)
+      return res.status(404).json({ error: 'Chat session not found' });
     session.comments.push({ name, comment });
     await session.save();
     console.log(`Added comment to chat session ${req.params.id}:`, { name, comment });
@@ -720,7 +743,8 @@ app.post('/radio/chatsession/:id/comment', async (req, res) => {
 app.get('/radio/chatsession/:id/comments', async (req, res) => {
   try {
     const session = await ChatSession.findById(req.params.id);
-    if (!session) return res.status(404).json({ error: 'Chat session not found' });
+    if (!session)
+      return res.status(404).json({ error: 'Chat session not found' });
     res.json(session.comments);
   } catch (err) {
     console.error('Error fetching comments:', err);
@@ -746,7 +770,7 @@ const transporter = nodemailer.createTransport({
   secure: true,
   auth: {
     user: 'philip.ajayi@fivorne.com', // Zoho custom email
-    pass: '5Skmyk258bhz',             // Zoho app password
+    pass: '5Skmyk258bhz', // Zoho app password
   },
 });
 
@@ -862,36 +886,54 @@ Message: ${message}\n`,
   }
   The {name} placeholder will be replaced with each subscriber's name.
 */
-app.post('/contact/sendSubscribeMessage', async (req, res) => {
-  const { subject, body } = req.body;
-  try {
-    const subscribers = await Subscriber.find({});
-    const sendEmails = subscribers.map(async (subscriber) => {
-      const personalizedSubject = subject.replace(/{name}/g, subscriber.name);
-      const personalizedBody = body.replace(/{name}/g, subscriber.name);
+app.post(
+  '/contact/sendSubscribeMessage',
+  upload.array('files'), // Allows multiple file attachments under field "files"
+  async (req, res) => {
+    const { subject, body } = req.body;
 
-      const mailOptions = {
-        from: '"MIV Word House" <philip.ajayi@fivorne.com>',
-        to: subscriber.email,
-        subject: personalizedSubject,
-        text: personalizedBody,
-        html: personalizedBody,
-      };
+    // Map uploaded files to Nodemailer's attachment format
+    const attachments =
+      req.files?.map((file) => ({
+        filename: file.originalname,
+        content: file.buffer,
+        contentType: file.mimetype,
+      })) || [];
 
-      try {
-        await transporter.sendMail(mailOptions);
-      } catch (error) {
-        console.error(`Error sending email to ${subscriber.email}:`, error);
-      }
-    });
+    try {
+      const subscribers = await Subscriber.find({});
+      const sendEmails = subscribers.map(async (subscriber) => {
+        const personalizedSubject = subject.replace(/{name}/g, subscriber.name);
+        const personalizedBody = body.replace(/{name}/g, subscriber.name);
 
-    await Promise.all(sendEmails);
-    res.status(200).json({ message: 'Subscribe message sent to all subscribers.' });
-  } catch (error) {
-    console.error('Error sending subscribe messages:', error);
-    res.status(500).json({ message: 'Error sending subscribe messages.' });
+        const mailOptions = {
+          from: '"MIV Word House" <philip.ajayi@fivorne.com>',
+          to: subscriber.email,
+          subject: personalizedSubject,
+          text: personalizedBody,
+          html: personalizedBody,
+          attachments, // Attach uploaded files
+        };
+
+        try {
+          await transporter.sendMail(mailOptions);
+        } catch (error) {
+          console.error(`Error sending email to ${subscriber.email}:`, error);
+        }
+      });
+
+      await Promise.all(sendEmails);
+      res
+        .status(200)
+        .json({ message: 'Subscribe message sent to all subscribers.' });
+    } catch (error) {
+      console.error('Error sending subscribe messages:', error);
+      res
+        .status(500)
+        .json({ message: 'Error sending subscribe messages.' });
+    }
   }
-});
+);
 
 // Serve static files from the Vite build directory
 app.use(express.static(path.join(__dirname, 'frontend', 'dist')));
@@ -900,7 +942,6 @@ app.use(express.static(path.join(__dirname, 'frontend', 'dist')));
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'frontend', 'dist', 'index.html'));
 });
-
 
 // ---------------------------------------------------------
 // Start the Server
