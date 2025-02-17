@@ -664,6 +664,7 @@ const chatCommentSchema = new mongoose.Schema({
 const chatSessionSchema = new mongoose.Schema({
   startTime: { type: Date, required: true },
   endTime: { type: Date, required: true },
+  timeZone: String,
   comments: [chatCommentSchema],
   createdAt: { type: Date, default: Date.now },
 });
@@ -671,10 +672,11 @@ const ChatSession = eventDB.model('ChatSession', chatSessionSchema);
 
 app.post('/radio/chatsession', async (req, res) => {
   try {
-    const { startTime, endTime } = req.body;
+    const { startTime, endTime, timeZone } = req.body;
     const newSession = new ChatSession({
       startTime: new Date(startTime),
       endTime: new Date(endTime),
+      timeZone,  // Save the offset
     });
     const saved = await newSession.save();
     console.log('Created chat session:', saved);
@@ -690,6 +692,7 @@ app.put('/radio/chatsession/:id', async (req, res) => {
     const updateData = {};
     if (req.body.startTime) updateData.startTime = new Date(req.body.startTime);
     if (req.body.endTime) updateData.endTime = new Date(req.body.endTime);
+    if (req.body.timeZone) updateData.timeZone = req.body.timeZone; // Update the offset if provided
     const updated = await ChatSession.findByIdAndUpdate(
       req.params.id,
       { $set: updateData },
