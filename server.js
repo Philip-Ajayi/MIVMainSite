@@ -762,7 +762,7 @@ app.get('/radio/chatsession/:id/comments', async (req, res) => {
 // Define Subscriber Schema & Model (using contactDB)
 const subscriberSchema = new mongoose.Schema({
   name: { type: String, required: true },
-  email: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
 });
 const Subscriber = contactDB.model('Subscriber', subscriberSchema);
 
