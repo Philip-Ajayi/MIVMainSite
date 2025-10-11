@@ -4,6 +4,7 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const { google } = require('googleapis');
+const { Resend } = require('resend'); // ✅ Destructure Resend
 const multer = require('multer');
 const nodemailer = require('nodemailer');
 const bodyParser = require('body-parser');
@@ -13,7 +14,11 @@ const path = require('path');
 
 // Initialize express app
 const app = express();
-
+// --------------------
+// Initialize Resend
+// --------------------
+const resend = new Resend('re_YWWEtHth_Hp2AvP3ryrorMrfnVQSLBvhw'); // ✅ now works
+const FROM_EMAIL = 'Word House <contact@mivwordhouse.com>';
 // -----------------------
 // Global Middleware Setup
 // -----------------------
@@ -759,34 +764,19 @@ app.get('/radio/chatsession/:id/comments', async (req, res) => {
 // Module 6: Contact & Nodemailer Endpoints
 // ---------------------------------------------------------
 
-// Define Subscriber Schema & Model (using contactDB)
+// --------------------
+// MongoDB Subscriber Schema
+// --------------------
 const subscriberSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
 });
+
 const Subscriber = contactDB.model('Subscriber', subscriberSchema);
 
-// Configure Nodemailer with Zoho
-const transporter = nodemailer.createTransport({
-  host: 'smtp.zoho.com',
-  port: 465, // Use 465 for SSL (or 587 for TLS)
-  secure: true,
-  auth: {
-    user: 'philip.ajayi@fivorne.com', // Zoho custom email
-    pass: '5Skmyk258bhz', // Zoho app password
-  },
-});
-
-// Verify transporter connection
-transporter.verify((error, success) => {
-  if (error) {
-    console.error('Error connecting to mail server:', error);
-  } else {
-    console.log('Mail server is ready to take messages');
-  }
-});
-
-// Subscribers Endpoints
+// --------------------
+// Subscriber Routes
+// --------------------
 app.get('/contact/email', async (req, res) => {
   try {
     const subscribers = await Subscriber.find({});
@@ -820,28 +810,26 @@ app.delete('/contact/email/:id', async (req, res) => {
   }
 });
 
+// --------------------
 // Church Contact Form Submission
+// --------------------
 app.post('/contact/contact', async (req, res) => {
   const { name, email, message } = req.body;
 
-  const mailOptions = {
-    from: '"Church Contact" <philip.ajayi@fivorne.com>',
-    to: 'philip.ajayi@fivorne.com',
-    subject: 'New Contact Form Submission',
-    text: `You have received a new contact form submission:\n
-Name: ${name}\n
-Email: ${email}\n
-Message: ${message}\n`,
-    html: `
-      <h3>New Contact Form Submission</h3>
-      <p><strong>Name:</strong> ${name}</p>
-      <p><strong>Email:</strong> ${email}</p>
-      <p><strong>Message:</strong> ${message}</p>
-    `,
-  };
-
   try {
-    await transporter.sendMail(mailOptions);
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: 'contact@mivwordhouse.com',
+      subject: 'New Contact Form Submission',
+      text: `You have received a new contact form submission:\nName: ${name}\nEmail: ${email}\nMessage: ${message}`,
+      html: `
+        <h3>New Contact Form Submission</h3>
+        <p><strong>Name:</strong> ${name}</p>
+        <p><strong>Email:</strong> ${email}</p>
+        <p><strong>Message:</strong> ${message}</p>
+      `,
+    });
+
     res.status(200).json({ message: 'Contact form submitted successfully.' });
   } catch (error) {
     console.error('Error sending contact email:', error);
@@ -849,30 +837,27 @@ Message: ${message}\n`,
   }
 });
 
+// --------------------
 // Prayer Request Submission
+// --------------------
 app.post('/contact/prayer', async (req, res) => {
   const { name, email, phone, message } = req.body;
 
-  const mailOptions = {
-    from: '"Prayer Request" <philip.ajayi@fivorne.com>',
-    to: 'philip.ajayi@fivorne.com',
-    subject: 'New Prayer Request Submission',
-    text: `You have received a new prayer request:\n
-Name: ${name}\n
-Email: ${email}\n
-Phone: ${phone}\n
-Message: ${message}\n`,
-    html: `
-      <h3>New Prayer Request Submission</h3>
-      <p><strong>Name:</strong> ${name}</p>
-      <p><strong>Email:</strong> ${email}</p>
-      <p><strong>Phone:</strong> ${phone}</p>
-      <p><strong>Message:</strong> ${message}</p>
-    `,
-  };
-
   try {
-    await transporter.sendMail(mailOptions);
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: 'contact@mivwordhouse.com',
+      subject: 'New Prayer Request Submission',
+      text: `You have received a new prayer request:\nName: ${name}\nEmail: ${email}\nPhone: ${phone}\nMessage: ${message}`,
+      html: `
+        <h3>New Prayer Request Submission</h3>
+        <p><strong>Name:</strong> ${name}</p>
+        <p><strong>Email:</strong> ${email}</p>
+        <p><strong>Phone:</strong> ${phone}</p>
+        <p><strong>Message:</strong> ${message}</p>
+      `,
+    });
+
     res.status(200).json({ message: 'Prayer request submitted successfully.' });
   } catch (error) {
     console.error('Error sending prayer email:', error);
@@ -880,63 +865,31 @@ Message: ${message}\n`,
   }
 });
 
+// --------------------
 // Send Subscribe Message to All Subscribers
-/*
-  Expected JSON body:
-  {
-    "subject": "Hello {name}, check out our update!",
-    "body": "Dear {name}, <br/> Here is our latest news..."
+// --------------------
+app.post('/contact/sendSubscribeMessage', upload.array('files'), async (req, res) => {
+  const { subject, body } = req.body;
+
+  try {
+    const subscribers = await Subscriber.find({});
+    await Promise.all(
+      subscribers.map(subscriber => resend.emails.send({
+        from: FROM_EMAIL,
+        to: subscriber.email,
+        subject: subject.replace(/{name}/g, subscriber.name),
+        text: body.replace(/{name}/g, subscriber.name),
+        html: body.replace(/{name}/g, subscriber.name),
+      }))
+    );
+
+    res.status(200).json({ message: 'Subscribe message sent to all subscribers.' });
+  } catch (error) {
+    console.error('Error sending subscribe messages:', error);
+    res.status(500).json({ message: 'Error sending subscribe messages.' });
   }
-  The {name} placeholder will be replaced with each subscriber's name.
-*/
-app.post(
-  '/contact/sendSubscribeMessage',
-  upload.array('files'), // Allows multiple file attachments under field "files"
-  async (req, res) => {
-    const { subject, body } = req.body;
+});
 
-    // Map uploaded files to Nodemailer's attachment format
-    const attachments =
-      req.files?.map((file) => ({
-        filename: file.originalname,
-        content: file.buffer,
-        contentType: file.mimetype,
-      })) || [];
-
-    try {
-      const subscribers = await Subscriber.find({});
-      const sendEmails = subscribers.map(async (subscriber) => {
-        const personalizedSubject = subject.replace(/{name}/g, subscriber.name);
-        const personalizedBody = body.replace(/{name}/g, subscriber.name);
-
-        const mailOptions = {
-          from: '"MIV Word House" <philip.ajayi@fivorne.com>',
-          to: subscriber.email,
-          subject: personalizedSubject,
-          text: personalizedBody,
-          html: personalizedBody,
-          attachments, // Attach uploaded files
-        };
-
-        try {
-          await transporter.sendMail(mailOptions);
-        } catch (error) {
-          console.error(`Error sending email to ${subscriber.email}:`, error);
-        }
-      });
-
-      await Promise.all(sendEmails);
-      res
-        .status(200)
-        .json({ message: 'Subscribe message sent to all subscribers.' });
-    } catch (error) {
-      console.error('Error sending subscribe messages:', error);
-      res
-        .status(500)
-        .json({ message: 'Error sending subscribe messages.' });
-    }
-  }
-);
 
 // Serve static files from the Vite build directory
 app.use(express.static(path.join(__dirname, 'frontend', 'dist')));
