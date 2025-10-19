@@ -18,7 +18,7 @@ const app = express();
 // Initialize Resend
 // --------------------
 const resend = new Resend('re_YWWEtHth_Hp2AvP3ryrorMrfnVQSLBvhw'); // ✅ now works
-const FROM_EMAIL = 'Word House <contact@mivwordhouse.com>';
+const FROM_EMAIL = 'Word House <contact@noreply.mivwordhouse.com>';
 // -----------------------
 // Global Middleware Setup
 // -----------------------
@@ -906,3 +906,4 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () =>
   console.log(`Server running on port ${PORT}`)
 );
+
